@@ -76,7 +76,7 @@ def main():
     # if fp16_cfg is not None:
     #     wrap_fp16_model(model)
     # load_checkpoint(model, args.checkpoint, map_location='cpu')
-
+    load_checkpoint(model, args.checkpoint)
 
     model = MMDataParallel(model, device_ids=[0])
 

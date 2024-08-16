@@ -11,6 +11,7 @@
 # ------------------------------------------------------------------------
 import torch
 import torch.nn as nn
+import numpy as np
 from mmcv.cnn import Linear, bias_init_with_prob
 
 from mmcv.runner import force_fp32
@@ -26,6 +27,7 @@ from projects.mmdet3d_plugin.core.bbox.util import normalize_bbox
 from mmdet.models.utils import NormedLinear
 from projects.mmdet3d_plugin.models.utils.positional_encoding import pos2posemb3d, pos2posemb1d, nerf_positional_encoding
 from projects.mmdet3d_plugin.models.utils.misc import MLN, topk_gather, transform_reference_points, memory_refresh, SELayer_Linear
+
 
 @HEADS.register_module()
 class StreamPETRHead(AnchorFreeHead):
@@ -106,6 +108,7 @@ class StreamPETRHead(AnchorFreeHead):
                  init_cfg=None,
                  normedlinear=False,
                  **kwargs):
+        self._____KOJI_COUNTER = 0
         # NOTE here use `AnchorFreeHead` instead of `TransformerHead`,
         # since it brings inconvenience when the initialization of
         # `AnchorFreeHead` is called.
@@ -588,6 +591,18 @@ class StreamPETRHead(AnchorFreeHead):
 
         pos_embed, cone = self.position_embeding(data, memory_center, topk_indexes, img_metas)
 
+        #################### KOJI
+        import os
+        directory = f"work_dirs/intermediate/{self._____KOJI_COUNTER:04d}"
+        os.makedirs(directory, exist_ok=True)
+        print("KOJI!!! ", img_metas)
+        pos_embed.cpu().detach().numpy().tofile(f"{directory}/pos_embed.bin")  # KOJI adding this line to save data['img'] as binary file
+        cone.cpu().detach().numpy().tofile(f"{directory}/cone.bin")  # KOJI adding this line to save data['img'] as binary file
+        data["timestamp"].cpu().detach().numpy().tofile(f"{directory}/data_timestamp.bin")  # KOJI adding this line to save data['img'] as binary file
+        data["ego_pose"].cpu().detach().numpy().tofile(f"{directory}/data_ego_pose.bin")  # KOJI adding this line to save data['img'] as binary file
+        data["ego_pose_inv"].cpu().detach().numpy().tofile(f"{directory}/data_ego_pose_inv.bin")  # KOJI adding this line to save data['img'] as binary file
+        #################### KOJI
+
         memory = self.memory_embed(memory)
 
         # spatial_alignment in focal petr
@@ -627,6 +642,13 @@ class StreamPETRHead(AnchorFreeHead):
         
         # update the memory bank
         self.post_update_memory(data, rec_ego_pose, all_cls_scores, all_bbox_preds, outs_dec, mask_dict)
+
+        #################### KOJI
+        all_cls_scores.cpu().detach().numpy().tofile(f"{directory}/all_cls_scores.bin")  # KOJI adding this line to save data['img'] as binary file
+        all_bbox_preds.cpu().detach().numpy().tofile(f"{directory}/all_bbox_preds.bin")  # KOJI adding this line to save data['img'] as binary file
+        data['img'].cpu().detach().numpy().tofile(f"{directory}/img.bin")  # KOJI adding this line to save data['img'] as binary file
+        self._____KOJI_COUNTER += 1
+        #################### KOJI
 
         if mask_dict and mask_dict['pad_size'] > 0:
             output_known_class = all_cls_scores[:, :, :mask_dict['pad_size'], :]
