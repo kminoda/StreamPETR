@@ -116,6 +116,7 @@ def main():
         def forward(self, img):
             # img: 6, 3, 256, 704
             mod = self.mod
+            print("KOJI", mod.extract_img_feat(img, 1).shape)
             return mod.extract_img_feat(img, 1)
 
     # Wrapper Class for onnx conversion
@@ -229,11 +230,27 @@ def main():
             return all_cls_scores, all_bbox_preds, \
                 head.memory_embedding, head.memory_reference_point, head.memory_timestamp, head.memory_egopose, head.memory_velo, \
                 reference_points, tgt, temp_memory, temp_pos, query_pos, query_pos_in, outs_dec
-                
+
+    class TrtPositionEmbeddingContainer(torch.nn.Module):
+        def __init__(self, mod, *args, **kwargs) -> None:
+            super().__init__(*args, **kwargs)
+            self.mod = mod
+
+        def forward(self, img_metas_pad, img_feats, intrinsics, img2lidar):
+            mod = self.mod
+            data = {
+                "img_feats": img_feats,
+                "intrinsics": intrinsics,
+                "img2lidar": img2lidar,
+            }
+            img_metas = [{"pad_shape": [img_metas_pad]}]
+            location = mod.prepare_location(img_metas, **data)
+            return mod.pts_bbox_head.position_embeding(data, location, None, img_metas)
+
     model.eval()
     model = model.float()
 
-    if args.section not in ["extract_img_feat", "pts_head_memory"]:
+    if args.section not in ["extract_img_feat", "pts_head_memory", "position_embedding"]:
         raise RuntimeError("unknown section {}".format(args.section))
         exit(-1)
 
@@ -275,6 +292,18 @@ def main():
                       "post_memory_egopose", 
                       "post_memory_velo",
                       "reference_points", "tgt", "temp_memory", "temp_pos", "query_pos", "query_pos_in", "outs_dec"]
+    elif args.section == "position_embedding":
+        from onnxruntime.tools import pytorch_export_contrib_ops
+        pytorch_export_contrib_ops.register()
+        tm = TrtPositionEmbeddingContainer(model.module)
+        arrs = [
+            torch.from_numpy(np.array([256, 704, 3])).int(),
+            torch.from_numpy(np.random.uniform(-0.5, 0.5, size=(1, 6, 256, 16, 44))).float(),
+            torch.from_numpy(np.random.uniform(-0.5, 0.5, size=(1, 6, 4, 4))).float(),
+            torch.from_numpy(np.random.uniform(-0.5, 0.5, size=(1, 6, 4, 4))).float(),
+        ]
+        input_names = ["img_metas_pad", "img_feats_NOT_USED", "intrinsics", "img2lidar"]
+        output_names = ["pos_embed", "cone"]
 
     tm = tm.float()
     tm.cpu()

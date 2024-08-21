@@ -288,6 +288,7 @@ class Petr3D(MVXTwoStageDetector):
                 data[key] = data[key][0][0].unsqueeze(0)
             else:
                 data[key] = data[key][0]
+        data['img2lidar'] = data['lidar2img'].inverse()
         return self.simple_test(img_metas[0], **data)
 
     def simple_test_pts(self, img_metas, **data):

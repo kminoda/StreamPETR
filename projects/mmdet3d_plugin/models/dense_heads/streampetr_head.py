@@ -403,7 +403,10 @@ class StreamPETRHead(AnchorFreeHead):
 
         coords = coords.unsqueeze(-1)
 
-        img2lidars = data['lidar2img'].inverse()
+        if 'img2lidar' in data.keys():
+            img2lidars = data['img2lidar']
+        else:
+            img2lidars = data['lidar2img'].inverse()
         img2lidars = img2lidars.view(BN, 1, 1, 4, 4).repeat(1, H*W, D, 1, 1).view(B, LEN, D, 4, 4)
         img2lidars = topk_gather(img2lidars, topk_indexes)
 
@@ -580,6 +583,17 @@ class StreamPETRHead(AnchorFreeHead):
                 head with normalized coordinate format (cx, cy, w, l, cz, h, theta, vx, vy). \
                 Shape [nb_dec, bs, num_query, 9].
         """
+        #################### KOJI
+        print(img_metas[0]['pad_shape'])
+        import os
+        directory = f"work_dirs/intermediate/{self._____KOJI_COUNTER:04d}"
+        os.makedirs(directory, exist_ok=True)
+        data["img2lidar"].cpu().detach().numpy().tofile(f"{directory}/img2lidar.bin")  # KOJI adding this line to save data['img'] as binary file
+        data["intrinsics"].cpu().detach().numpy().tofile(f"{directory}/intrinsics.bin")  # KOJI adding this line to save data['img'] as binary file
+        np.array(img_metas[0]['pad_shape'][0]).astype(np.int32).tofile(f"{directory}/img_metas_pad.bin")  # KOJI adding this line to save data['img'] as binary file
+        print(np.array(img_metas[0]['pad_shape'][0]))
+        #################### KOJI
+
         # zero init the memory bank
         self.pre_update_memory(data)
 
