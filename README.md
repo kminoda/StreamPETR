@@ -64,6 +64,7 @@ The detailed results can be found in the training log. For other results on nuSc
 - [x] Sliding window training
 - [x] Efficient training in streaming video
 - [x] [TensorRT inference](https://github.com/NVIDIA/DL4AGX/tree/master/AV-Solutions/streampetr-trt)
+- [x] [TensorRT ROS 2 node implementation](https://github.com/kminoda/StreamPETR_TensorRT_ROS2)
 - [x] 3D object tracking
 
 ## Acknowledgements
